@@ -1,0 +1,22 @@
+{
+  "name": "trackinops-crawler",
+  "version": "0.0.1",
+  "private": true,
+  "description": "TrackinOps Crawler micro process enabling the use of chromium and getting Task URLs from RabbitMQ.",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "NODE_ENV=production node --max_old_space_size=4096 index.js",
+    "dev": "NODE_ENV=development NODE_LOG_LEVEL=1 node --max_old_space_size=4096 index.js"
+  },
+  "author": "Darvydas Šilkus <darvydas@silkus.eu>",
+  "license": "GPLv3",
+  "dependencies": {
+    "bluebird": "^3.4.7",
+    "cheerio": "~0.22.0",
+    "chrome-remote-interface": "^0.23.2",
+    "dnscache": "^1.0.1",
+    "lodash": "^4.17.4",
+    "mongoose": "^4.8.1",
+    "rabbot": "^1.1.0"
+  }
+}
