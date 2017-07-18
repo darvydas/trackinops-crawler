@@ -11,12 +11,12 @@
   "author": "Darvydas Šilkus <darvydas@silkus.eu>",
   "license": "GPLv3",
   "dependencies": {
-    "bluebird": "^3.4.7",
+    "bluebird": "^3.5.0",
     "cheerio": "~0.22.0",
-    "chrome-remote-interface": "^0.23.2",
+    "chrome-remote-interface": "^0.24.2",
     "dnscache": "^1.0.1",
     "lodash": "^4.17.4",
-    "mongoose": "^4.8.1",
+    "mongoose": "^4.11.3",
     "rabbot": "^1.1.0"
   }
 }
