@@ -120,7 +120,7 @@ const startCrawlerSubscriptions = function () {
     _.each(_.keys(MongoCrawlerDocs), function (key) {
       // for (let i = 1; i <= MongoCrawlerDocs[key].maxParallelRequests; i++) {
       rabbit.handle({
-        queue: MongoCrawlerDocs[key].crawlerCustomId,
+        queue: 'Crawler.' + MongoCrawlerDocs[key].crawlerCustomId,
         type: 'crawler.' + MongoCrawlerDocs[key].crawlerCustomId + '.#'
       }, function (msg) {
         console.info("Received:", msg.body.url, "routingKey:", msg.fields.routingKey);
