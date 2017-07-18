@@ -371,12 +371,12 @@ const startCrawlerSubscriptions = function () {
                       })
                       .then(function () {
                         return Queue.publishMessageRequeue({
-                          urlList: result.followingLinks,
-                          executionDoc: requestMessageBody.executionDoc
-                        }, requestMessageBody.uniqueUrl)
+                          urlList: extractedResults.followingLinks,
+                          executionDoc: msg.body.executionDoc
+                        }, msg.body.uniqueUrl)
                           .then(function (messageId) {
                             // console.info(queuedUrlList);
-                            return resolve(messageId);
+                            return Promise.resolve(messageId);
                           })
                           .catch(function (err) {
                             console.error(new Error(`Queue.publishMessageRequeue failed ${err.message}`));
@@ -410,8 +410,9 @@ const startCrawlerSubscriptions = function () {
                             uniqueUrl: msg.body.uniqueUrl,
                             url: msg.body.url,
                             executionId: msg.body.executionDoc._id
-                          }).finally(() => {
-                            console.error('Crawling failed error saved to Requests Collection', upsertResponse);
+                          }).finally((upsertResponse) => {
+                            if (upsertResponse)
+                              console.error('Crawling failed error saved to Requests Collection', upsertResponse);
 
                             msg.ack(); // finishes the job and saves error
                             endChromeTab(target.id);
