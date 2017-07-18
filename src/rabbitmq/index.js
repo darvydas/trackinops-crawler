@@ -319,7 +319,7 @@ const startCrawlerSubscriptions = function () {
                       Security.setOverrideCertificateErrors({ override: true }),
                       Network.setUserAgentOverride({ userAgent: "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)" }),
                       // Network.setBlockedURLs({ urls: msg.body.executionDoc.requestBlockList }),
-                      Network.enableRequestInterception({ enabled: true }),
+                      Network.setRequestInterceptionEnabled({ enabled: true }),
                       Network.setCacheDisabled({ cacheDisabled: true })
                     ])
                   })
