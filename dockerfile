@@ -43,10 +43,10 @@ echo "root hard     nofile         unlimited" >> /etc/security/limits.conf
 # Build TrackinOps from source locally.
 RUN mkdir -p /usr/src/app/trackinops-crawler
 COPY . /usr/src/app/trackinops-crawler
-RUN npm install
 
 # setup Working Directory
 WORKDIR /usr/src/app/trackinops-crawler
+RUN npm install
 
 ## PART 4: Final setup
 ## ===================
