@@ -29,3 +29,6 @@ node_modules
 
 # LevelDB files
 DB/*/*
+
+# config file
+configuration.js
