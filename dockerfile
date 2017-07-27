@@ -18,6 +18,10 @@ sudo sh -c 'echo "deb http://dl.google.com/linux/chrome/deb/ stable main" >> /et
 sudo apt-get update &&\
 sudo apt-get install -y google-chrome-unstable
 
+# dependencies for node-gyp which is needed for nsqjs module
+# build base includes g++ and gcc and Make
+RUN sudo apt-get install -y python build-essential 
+
 ## PART 2: Removing System Config limits for Google Chromium
 ## =========================================================
 RUN echo "DefaultTasksMax=infinity" >> /etc/systemd/system.conf \
@@ -35,14 +39,18 @@ echo "root hard     nofile         unlimited" >> /etc/security/limits.conf
 ## ==========================
 
 # Download TrackinOps from git source.
-# RUN git clone https://github.com/darvydas/trackinops-crawler /usr/src/app/trackinops-crawler &&\
-# cd /usr/src/app/trackinops-crawler &&\
-# # git checkout tags/v0.1 &&\
+RUN git clone https://github.com/darvydas/trackinops-crawler /usr/src/app/trackinops-crawler &&\
+cd /usr/src/app/trackinops-crawler 
+#&&\
+# git checkout tags/v0.1 &&\
 # npm install
 
-# Build TrackinOps from source locally.
-RUN mkdir -p /usr/src/app/trackinops-crawler
-COPY . /usr/src/app/trackinops-crawler
+# # Build TrackinOps from source locally.
+# RUN mkdir -p /usr/src/app/trackinops-crawler
+# COPY . /usr/src/app/trackinops-crawler
+
+# Copy configuration file from local source
+COPY ./configuration.js /usr/src/app/trackinops-crawler/configuration.js
 
 # setup Working Directory
 WORKDIR /usr/src/app/trackinops-crawler

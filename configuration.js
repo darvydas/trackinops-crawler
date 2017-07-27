@@ -47,6 +47,12 @@ const development = {
       keyEncoding: 'utf8',
       valueEncoding: 'json'
     }
+  },
+  nsq: {
+    server: '127.0.0.1',
+    wPort: 32769, // TCP nsqd Write Port, default: 4150
+    rPort: 32770, // HTTP nsqlookupd Read Port, default: 4161
+    lookupdHTTPAddresses: ['127.0.0.1:32770'] // HTTP default: '127.0.0.1:4161'
   }
 };
 const production = {
@@ -107,37 +113,22 @@ const production = {
       keyEncoding: 'utf8',
       valueEncoding: 'json'
     }
+  },
+  nsq: {
+    server: 'nsqd-inDocker',
+    wPort: 4150, // TCP nsqd Write Port, default: 4150
+    rPort: 4161, // HTTP nsqlookupd Read Port, default: 4161
+    nsqdTCPAddresses: [`nsqd-inDocker:4150`],
+    lookupdHTTPAddresses: ['nsqlookupd:4161'] // HTTP default: '127.0.0.1:4161'
   }
 
-};
-const test = {
-  web: {
-    port: process.env.WEB_PORT || 3000
-  },
-  mongodb: {
-    host: "mongod",
-    port: 27017,
-    db: "trackinops",
-    uri: "mongodb://mongod:27017/trackinops",
-    // username: "",
-    // password: "",
-    options: {
-      server: { socketOptions: { keepAlive: 300000, connectTimeoutMS: 30000 } },
-      replset: {
-        ha: true, // Make sure the high availability checks are on,
-        haInterval: 5000, // Run every 5 seconds
-        socketOptions: { keepAlive: 300000, connectTimeoutMS: 30000, socketTimeoutMS: 90000 }
-      },
-      config: { autoIndex: false } // calls ensureIndex on every index in a DB, slower restart, more reliable indexes
-    }
-  }
 };
 module.exports = function (env) {
   if (env === 'production')
     return production;
 
   if (env === 'test')
-    return production;
+    return development;
 
   if (!env || env === 'dev' || env === 'development')
     return development;
