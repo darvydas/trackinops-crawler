@@ -19,10 +19,7 @@ NSQwriter.on('closed', function () {
   console.info('NSQ Writer closed Event');
 });
 
-const NSQreader = new nsq.Reader('trackinops.crawler-request', 'Execute_request', {
-  lookupdHTTPAddresses: config.nsq.lookupdHTTPAddresses,
-  nsqdTCPAddresses: config.nsq.nsqdTCPAddresses
-});
+const NSQreader = new nsq.Reader('trackinops.crawler-request', 'Execute_request', config.nsq.readerOptions);
 NSQreader.connect();
 NSQreader.on('ready', function () {
   console.info(`NSQ Reader ready on nsqlookupd:${config.nsq.lookupdHTTPAddresses} or ${nsqdTCPAddresses}`);
