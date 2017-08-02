@@ -6,7 +6,7 @@ const mongoose = require('mongoose');
 mongoose.Promise = require('bluebird'); // Use bluebird promises
 const crawlerModel = require('../models/crawlerModel');
 // const executionModel = require('../models/executionModel');
-// const requestModel = require('../models/requestModel');
+const requestModel = require('../models/requestModel');
 mongoose.connect(config.mongodb.uri, config.mongodb.options);
 
 const nsq = require('nsqjs');
@@ -28,23 +28,6 @@ NSQreader.on('error', function (err) {
   if (arguments.length > 1) _.each(arguments, () => console.log)
   console.error(`NSQ Reader error Event`);
   console.error(new Error(err));
-
-  // TODO: should save an error to mongoDB, but needs msg informaction  
-  // // saving failed any failed request to MongoDB
-  // return requestModel.upsertAfterError(
-  //   {
-  //     // Mongoose creating object to DB
-  //     errorInfo: err,
-
-  //     requestedAt: msg.body.timestamp,
-  //     uniqueUrl: msg.body.uniqueUrl,
-  //     url: msg.body.url,
-  //     executionId: msg.body.executionDoc._id
-  //   }).then(function (upsertResponse) {
-  //     console.error('Crawling failed error saved to Requests Collection', upsertResponse);
-  //   }).catch(function (lastError) {
-  //     console.error('lastError', lastError);
-  //   });
 });
 NSQreader.on('closed', function () {
   console.info('NSQ Reader closed Event');
