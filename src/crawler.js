@@ -1,4 +1,5 @@
 // initialize NSQ connection
-const Queue = require("./nsq");
+const NSQ = require("./nsq");
+
 // initialize workers
-Queue.startCrawlerSubscriptions();
+NSQ.startCrawlerSubscriptions();

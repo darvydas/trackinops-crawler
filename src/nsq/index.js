@@ -1,13 +1,21 @@
 // insert configuration file
 const config = require('../../configuration.js')(process.env.NODE_ENV);
 
-// start MongoDB with Mongoose
-const mongoose = require('mongoose');
-mongoose.Promise = require('bluebird'); // Use bluebird promises
-const crawlerModel = require('../models/crawlerModel');
-// const executionModel = require('../models/executionModel');
-const requestModel = require('../models/requestModel');
-mongoose.connect(config.mongodb.uri, config.mongodb.options);
+const _ = require('lodash');
+const cheerio = require('cheerio');
+const Promise = require('bluebird');
+const URL = require('url');
+const dns = require('dns');
+const rp = require('request-promise');
+
+const CDP = require('chrome-remote-interface');
+
+const dnscache = require('dnscache')({
+  "enable": true,
+  "ttl": 300,
+  "cachesize": 1000
+});
+
 
 const nsq = require('nsqjs');
 const NSQwriter = new nsq.Writer(config.nsq.server, config.nsq.wPort);
@@ -19,34 +27,19 @@ NSQwriter.on('closed', function () {
   console.info('NSQ Writer closed Event');
 });
 
-const NSQreader = new nsq.Reader('trackinops.crawler-request', 'Execute_request', config.nsq.readerOptions);
+
+const NSQreader = new nsq.Reader(process.env.readTopic || 'trackinops.crawler-request', 'Execute_request', config.nsq.readerOptions);
 NSQreader.connect();
 NSQreader.on('ready', function () {
   console.info(`NSQ Reader ready on nsqlookupd:${config.nsq.lookupdHTTPAddresses} or ${nsqdTCPAddresses}`);
 });
 NSQreader.on('error', function (err) {
-  if (arguments.length > 1) _.each(arguments, () => console.log)
   console.error(`NSQ Reader error Event`);
   console.error(new Error(err));
 });
 NSQreader.on('closed', function () {
   console.info('NSQ Reader closed Event');
 });
-
-const _ = require('lodash');
-const cheerio = require('cheerio');
-const Promise = require('bluebird');
-const URL = require('url');
-const dns = require('dns');
-
-const CDP = require('chrome-remote-interface');
-
-const dnscache = require('dnscache')({
-  "enable": true,
-  "ttl": 300,
-  "cachesize": 1000
-});
-
 
 process.on('SIGINT', function () {
   console.info("\nStarting shutting down from SIGINT (Ctrl-C)");
@@ -81,24 +74,6 @@ process.on('SIGINT', function () {
   });
   // process.exit(0);
 })
-
-const publishCrawlerRequest = function (url, uniqueUrl, executionDoc) {
-  return new Promise(function (resolve, reject) {
-    NSQwriter.publish("trackinops.crawler-request", {
-      url: url,
-      uniqueUrl: uniqueUrl,
-      executionDoc: executionDoc,
-      timestamp: Date.now()
-    }, function (err) {
-      if (err) {
-        console.error(`NSQwriter Crawler Request publish Error: ${err.message}`);
-        return reject(err);
-      }
-      console.info(`Crawler Request sent to NSQ, 150 chars: ${uniqueUrl.substring(0, 150)}`);
-      return resolve();
-    })
-  })
-}
 
 const publishParserRequest = function (url, uniqueUrl, executionDoc) {
   return new Promise(function (resolve, reject) {
@@ -610,6 +585,5 @@ function isValidUrlByDNSHost(url) {
 
 exports = module.exports = Queue = {
   startCrawlerSubscriptions: startCrawlerSubscriptions,
-  publishCrawlerRequest: publishCrawlerRequest,
   publishMessageRequeue: publishMessageRequeue
 };

@@ -41,7 +41,7 @@ echo "root hard     nofile         unlimited" >> /etc/security/limits.conf
 # Download TrackinOps from git source.
 RUN git clone https://github.com/darvydas/trackinops-crawler /usr/src/app/trackinops-crawler &&\
 cd /usr/src/app/trackinops-crawler 
-#&&\
+# &&\
 # git checkout tags/v0.1 &&\
 # npm install
 
@@ -50,6 +50,7 @@ cd /usr/src/app/trackinops-crawler
 # COPY . /usr/src/app/trackinops-crawler
 
 # Copy configuration file from local source
+COPY ./package.json /usr/src/app/trackinops-crawler/package.json
 COPY ./configuration.js /usr/src/app/trackinops-crawler/configuration.js
 
 # setup Working Directory
