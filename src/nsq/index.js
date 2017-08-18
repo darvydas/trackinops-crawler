@@ -97,16 +97,16 @@ const publishMessageRequeue = function (bodyData, publishedMessageId) {
   return new Promise(function (resolve, reject) {
     if (_.isUndefined(bodyData)) { return reject(new Error('Message bodyData is undefined')) }
     // bodyData.timestamp = Date.now();
-    NSQwriter.publish("trackinops.crawler-requeue", {
+    NSQwriter.publish("trackinops.requeue-frontier", {
       publishedMessageId: publishedMessageId,
       urlList: bodyData.urlList,
       executionDoc: bodyData.executionDoc
     }, function (err) {
       if (err) {
-        console.error(`NSQwriter Requeue publish Error: ${err.message}`);
+        console.error(`NSQwriter Requeue Frontier publish Error: ${err.message}`);
         return reject(err);
       }
-      console.info(`Requeue sent to NSQ, 150 chars: ${publishedMessageId.substring(0, 150)}`);
+      console.info(`Sent to NSQ Requeue Frontier, 150 chars: ${publishedMessageId.substring(0, 150)}`);
       return resolve(publishedMessageId);
     })
   });
