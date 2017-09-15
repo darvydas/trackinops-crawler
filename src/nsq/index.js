@@ -320,7 +320,7 @@ const startCrawlerSubscriptions = function () {
                   // Network and Security domain settings
                   return Promise.all([
                     Security.setOverrideCertificateErrors({ override: true }),
-                    Network.setUserAgentOverride({ userAgent: "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)" }),
+                    // Network.setUserAgentOverride({ userAgent: "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)" }),
                     // Network.setBlockedURLs({ urls: msg.json().executionDoc.requestBlockList }),
 
                   ])
@@ -389,9 +389,9 @@ const startCrawlerSubscriptions = function () {
                     })
                     .then(function () {
                       // TODO: add random delay before finishing the job to emulate human crawling (it will slow down another job request)
+                      endChromeTab(target.id);
 
-                      msg.finish(); // the job have been finished
-                      return endChromeTab(target.id);
+                      return msg.finish(); // the job have been finished
                     })
                     .catch((err) => {
                       console.error(`ERROR: ${err.message}`);
@@ -399,23 +399,25 @@ const startCrawlerSubscriptions = function () {
                       if (err)
                         console.error(err); // JSON.stringify(error))); // done(new Error(JSON.stringify(error)));
 
-                      // saving failed any failed request to MongoDB
-                      return requestModel.upsertAfterError(
-                        {
-                          // Mongoose creating object to DB
-                          errorInfo: err,
+                      msg.finish(); // finishes the job and saves error
+                      endChromeTab(target.id);
+                      // // saving failed any failed request to MongoDB
+                      // return requestModel.upsertAfterError(
+                      //   {
+                      //     // Mongoose creating object to DB
+                      //     errorInfo: err,
 
-                          queuedAt: msg.timestamp,
-                          uniqueUrl: msg.json().uniqueUrl,
-                          url: msg.json().url,
-                          executionId: msg.json().executionDoc._id
-                        }).finally((upsertResponse) => {
-                          if (upsertResponse)
-                            console.error('Crawling failed error saved to Requests Collection', upsertResponse);
+                      //     queuedAt: msg.timestamp,
+                      //     uniqueUrl: msg.json().uniqueUrl,
+                      //     url: msg.json().url,
+                      //     executionId: msg.json().executionDoc._id
+                      //   }).finally((upsertResponse) => {
+                      //     if (upsertResponse)
+                      //       console.error('Crawling failed error saved to Requests Collection', upsertResponse);
 
-                          msg.finish(); // finishes the job and saves error
-                          endChromeTab(target.id);
-                        });
+                      //     msg.finish(); // finishes the job and saves error
+                      //     endChromeTab(target.id);
+                      //   });
                     });
                 }).catch((err) => {
                   console.error("Chrome err", err);

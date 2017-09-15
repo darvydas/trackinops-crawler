@@ -16,6 +16,7 @@ const production = {
     nsqdTCPAddresses: [`nsqd:4150`],
     lookupdHTTPAddresses: ['nsqlookupd:4161'],
     readerOptions: {
+      clientId: process.env.nsqClientId || '',
       maxInFlight: 5,
       maxBackoffDuration: 128,
       maxAttempts: 3,

@@ -73,4 +73,4 @@ COPY entrypoint.sh /
 RUN chmod +x /entrypoint.sh
 ENTRYPOINT ["/entrypoint.sh"]
 
-CMD NODE_ENV=production readTopic='trackinops.crawler.001' node --max_old_space_size=4096 index.js
+CMD NODE_ENV=production node --max_old_space_size=4096 index.js
