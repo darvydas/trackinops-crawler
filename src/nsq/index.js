@@ -478,7 +478,13 @@ function getAllLinksFromHtml(html, urlString, elementSelector, action) {
       let linkObject = {};
       switch (action) {
         // get link from element href attribute (ex: a[href])
-        case 'getHref': linkObject = URL.parse($(this).attr('href'));
+        case 'getHref':
+          linkObject = URL.parse($(this).attr('href'));
+          break;
+        // get link from element text (ex: <p>text</p>)
+        case 'getText':
+          linkObject = URL.parse($(this).text());
+          break;
       }
 
       if (!linkObject.protocol) {
