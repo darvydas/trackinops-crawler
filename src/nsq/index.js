@@ -258,7 +258,7 @@ const startCrawlerSubscriptions = function () {
                 console.log(host);
                 console.log('/' + msg.json().executionDoc.followLinks.crawlerUrlRegex + '/');
                 console.log(request.url.match('/' + msg.json().executionDoc.followLinks.crawlerUrlRegex + '/'));
-                return new RegExp('^' + msg.json().executionDoc.followLinks.crawlerUrlRegex + '$').test(request.url);
+                return new RegExp(msg.json().executionDoc.followLinks.crawlerUrlRegex).test(request.url);
               }
               const requestInterceptedEvents = () => {
                 // intercept requests
@@ -570,7 +570,7 @@ function getLinksFromHtml(html, urlString, followLinksSetting) {
         if (linkObject.host === url.host) {
           let link = URL.format(linkObject);
           // check the extracted link by the given filter RegEx
-          let pattern = new RegExp('^' + followLinksSetting.crawlerUrlRegex + '$', 'i'); // fragment locator
+          let pattern = new RegExp(followLinksSetting.crawlerUrlRegex, 'i'); // fragment locator
           if (pattern.test(link)) return links.push(URL.format(linkObject));
         }
       }
