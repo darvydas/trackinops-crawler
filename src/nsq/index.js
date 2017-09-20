@@ -367,14 +367,15 @@ const startCrawlerSubscriptions = function () {
                     })
                     .then(function (allLinks) {
                       extractedResults.allLinks = allLinks;
-                      return filterUrlListByRegex(allLinks, msg.json().executionDoc.followLinks.crawlerUrlRegex);
-                    })
-                    .then((followLinks) => {
-                      extractedResults.followingLinks = followLinks;
+                      //   return filterUrlListByRegex(allLinks, msg.json().executionDoc.followLinks.crawlerUrlRegex);
+                      // })
+                      // .then((followLinks) => {
+                      //   extractedResults.followingLinks = followLinks;
                     })
                     .then(function () {
                       return Queue.publishMessageRequeue({
-                        urlList: extractedResults.followingLinks,
+                        urlList: extractedResults.allLinks,
+                        // urlList: extractedResults.followingLinks,
                         executionDoc: msg.json().executionDoc
                       }, msg.json().uniqueUrl)
                         .then(function (messageId) {
