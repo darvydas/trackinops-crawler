@@ -2,20 +2,11 @@
 const config = require('../../configuration.js')(process.env.NODE_ENV);
 
 const _ = require('lodash');
-const cheerio = require('cheerio');
 const Promise = require('bluebird');
 const URL = require('url');
-const dns = require('dns');
-const rp = require('request-promise');
+const URI = require('urijs');
 
 const CDP = require('chrome-remote-interface');
-
-const dnscache = require('dnscache')({
-  "enable": true,
-  "ttl": 300,
-  "cachesize": 1000
-});
-
 
 const nsq = require('nsqjs');
 const NSQwriter = new nsq.Writer(config.nsq.server, config.nsq.wPort);
@@ -26,7 +17,6 @@ NSQwriter.on('ready', function () {
 NSQwriter.on('closed', function () {
   console.info('NSQ Writer closed Event');
 });
-
 
 const NSQreader = new nsq.Reader(process.env.readTopic || 'trackinops.crawler-request', 'Execute_request', config.nsq.readerOptions);
 NSQreader.connect();
@@ -310,6 +300,19 @@ const startCrawlerSubscriptions = function () {
                 });
               }
 
+              const getLoadedPageElements = (selector, action) => {
+                return new Promise((resolve, reject) => {
+                  let code = `(function(){var links=[];for(let elm of document.querySelectorAll('${selector}')) {links.push(${action == 'getText' ? 'elm.innerText' : 'elm.href'});}return {'links':links};}())`;
+                  Runtime.evaluate({
+                    expression: code,
+                    returnByValue: true
+                  })
+                    .then((result) => {
+                      resolve(_.chunk(_.uniq(result.result.value.links), 1000));
+                    });
+                })
+              };
+
               // Enable events on domains we are interested in.
               return Promise.all([
                 Network.enable(),
@@ -359,29 +362,21 @@ const startCrawlerSubscriptions = function () {
                     });
                   })
                     .then((result) => {
-                      return getAllLinksFromHtml(
-                        extractedResults.html,
-                        msg.json().url,
+                      return getLoadedPageElements(
                         msg.json().executionDoc.followLinks.elementSelector,
                         msg.json().executionDoc.followLinks.action);
                     })
-                    .then(function (allLinks) {
-                      extractedResults.allLinks = allLinks;
-                      //   return filterUrlListByRegex(allLinks, msg.json().executionDoc.followLinks.crawlerUrlRegex);
-                      // })
-                      // .then((followLinks) => {
-                      //   extractedResults.followingLinks = followLinks;
-                    })
-                    .then(function () {
-                      return Queue.publishMessageRequeue({
-                        urlList: extractedResults.allLinks,
-                        // urlList: extractedResults.followingLinks,
-                        executionDoc: msg.json().executionDoc
-                      }, msg.json().uniqueUrl)
-                        .then(function (messageId) {
-                          // console.info(queuedUrlList);
-                          return Promise.resolve(messageId);
-                        })
+                    .then(function (allLinkChunks) {
+                      // extractedResults.allLinks = _.flatten(allLinksChunks);
+                      return Promise.all(allLinkChunks.map((linkChunk) => {
+                        return constructUrls(linkChunk, msg.json().url)
+                          .then((constructedLinksChunk) => {
+                            return Queue.publishMessageRequeue({
+                              urlList: constructedLinksChunk,
+                              executionDoc: msg.json().executionDoc
+                            }, msg.json().uniqueUrl)
+                          })
+                      }))
                         .catch(function (err) {
                           console.error(new Error(`Queue.publishMessageRequeue failed ${err.message}`));
                           // if requeue of links from the page failed 
@@ -436,15 +431,12 @@ const startCrawlerSubscriptions = function () {
   // .catch(function (err, msg) {
   //   // do something with the error & message
   //   msg.requeue(delay = null, backoff = true);
-
   //   if (err) console.error(new Error(err));
-
   //   // saving failed any failed request to MongoDB
   //   return requestModel.upsertAfterError(
   //     {
   //       // Mongoose creating object to DB
   //       errorInfo: err,
-
   //       requestedAt: msg.timestamp,
   //       uniqueUrl: msg.json().uniqueUrl,
   //       url: msg.json().url,
@@ -455,66 +447,21 @@ const startCrawlerSubscriptions = function () {
   //       console.error('lastError', lastError);
   //     });
   // });
-  // console.info("Created", "rabbit handler for", MongoCrawlerDocs[key].crawlerCustomId);
-  // });
-
-  // }).catch(function (err) {
-  //   console.error('MongoDB crawlerModel search failed', err);
-  // });
 }
 
-function getAllLinksFromHtml(html, urlString, elementSelector, action) {
-  return new Promise(function (resolve, reject) {
-
-    let url = URL.parse(urlString);
-    if (!url.host) reject(new Error('function getAllLinksFromHtml -> url.host is not specified'));
-    if (!elementSelector) reject(new Error('function getAllLinksFromHtml -> elementSelector is not specified ' + urlString));
-    if (!action) reject(new Error('function getAllLinksFromHtml -> action is not specified ' + urlString));
-
-    let links = [];
-    let $ = cheerio.load(html);
-    $('script').remove(); // removes <script></script> tags
-
-    $(elementSelector).each(function (i, e) {
-      let linkObject = {};
-      switch (action) {
-        // get link from element href attribute (ex: a[href])
-        case 'getHref':
-          linkObject = URL.parse($(this).attr('href'));
-          break;
-        // get link from element text (ex: <p>text</p>)
-        case 'getText':
-          linkObject = URL.parse($(this).text());
-          break;
-      }
-
-      if (!linkObject.protocol) {
-        // set default extracted link protocol
-        linkObject.protocol = 'http:';
-      }
-
-      // skip any other protocols (mailto:, tel:, ftp:, etc.)
-      if (linkObject.protocol == 'http:' || linkObject.protocol == 'https:') {
-
-        if (!linkObject.host && !linkObject.pathname
-          && (linkObject.search || linkObject.hash)
-          && url.host) {
-          // adding extracted link host and pathname for internal links "?page=2" or "#something"
-          linkObject.host = url.host;
-          linkObject.pathname = url.pathname
-        }
-
-        // if extracted link hasn't got host, usually it means that it's internal link with skipped hostname
-        if (!linkObject.host && url.host) {
-          // set default host from the given url
-          linkObject.host = url.host;
-        }
-
-        return links.push(URL.format(linkObject));
-      }
-    });
-    resolve(_.uniq(links));
-  });
+function constructUrls(urlList, urlString) {
+  return new Promise((resolve, reject) => {
+    resolve(
+      _.map(_.filter(urlList, (url) => { return new URI(url).is("absolute") || _.startsWith('/', url) }),
+        (url) => {
+          let uri = new URI(url);
+          if (uri.is("absolute")) { return url; }
+          if (uri.is("relative"))
+          { return uri.absoluteTo(urlString).toString(); }
+          return '';
+        })
+    );
+  })
 }
 
 function filterUrlListByRegex(urlList, crawlerUrlRegex) {
@@ -522,73 +469,6 @@ function filterUrlListByRegex(urlList, crawlerUrlRegex) {
   let pattern = new RegExp(crawlerUrlRegex, 'i'); // url filter locator
   return urlList.filter(function (singleUrl) {
     return pattern.test(singleUrl);
-  });
-}
-
-function getLinksFromHtml(html, urlString, followLinksSetting) {
-  return new Promise(function (resolve, reject) {
-
-    let url = URL.parse(urlString);
-    if (!url.host) reject(new Error('function getLinksFromHtml -> url.host is not specified'));
-    if (!followLinksSetting) reject(new Error('function getLinksFromHtml -> followLinksSetting is not specified ' + urlString));
-    if (followLinksSetting && !followLinksSetting.elementSelector) reject(new Error('function getLinksFromHtml -> elementSelector is not specified ' + urlString));
-    if (followLinksSetting && !followLinksSetting.crawlerUrlRegex) reject(new Error('function getLinksFromHtml -> crawlerUrlRegex is not specified ' + urlString));
-
-    let links = [];
-    let $ = cheerio.load(html);
-    $('script').remove(); // removes <script></script> tags
-
-    $(followLinksSetting.elementSelector).each(function (i, e) {
-      let linkObject = {};
-      switch (followLinksSetting.action) {
-        // get link from element href attribute (ex: a[href])
-        case 'getHref': linkObject = URL.parse($(this).attr('href'));
-      }
-
-      if (!linkObject.protocol) {
-        // set default extracted link protocol
-        linkObject.protocol = 'http:';
-      }
-
-      // skip any other protocols (mailto:, tel:, ftp:, etc.)
-      if (linkObject.protocol == 'http:' || linkObject.protocol == 'https:') {
-
-        if (!linkObject.host && !linkObject.pathname
-          && (linkObject.search || linkObject.hash)
-          && url.host) {
-          // adding extracted link host and pathname for internal links "?page=2" or "#something"
-          linkObject.host = url.host;
-          linkObject.pathname = url.pathname
-        }
-
-        // if extracted link hasn't got host, usually it means that it's internal link with skipped hostname
-        if (!linkObject.host && url.host) {
-          // set default host
-          linkObject.host = url.host;
-        }
-
-        // given url and extracted link hostnames and ports matches
-        if (linkObject.host === url.host) {
-          let link = URL.format(linkObject);
-          // check the extracted link by the given filter RegEx
-          let pattern = new RegExp(followLinksSetting.crawlerUrlRegex, 'i'); // fragment locator
-          if (pattern.test(link)) return links.push(URL.format(linkObject));
-        }
-      }
-    });
-    resolve(_.uniq(links));
-  });
-}
-
-function isValidUrlByDNSHost(url) {
-  return new Promise(function (resolve, reject) {
-    host = URL.parse(url, true).host; // https://nodejs.org/api/url.html#url_url_parse_urlstring_parsequerystring_slashesdenotehost
-    return dnscache.lookup(host, { family: 4 }, // https://nodejs.org/api/dns.html#dns_dns_lookup_hostname_options_callback
-      function (err, address, family) {
-        if (err) reject(new Error(url + ' is not valid URL'));
-        console.info('isValidUrlByDNSHost; url: %j address: %j family: IPv%s', url, address, family);
-        return resolve(url);
-      })
   });
 }
 
